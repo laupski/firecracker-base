@@ -98,5 +98,13 @@ Vagrant.configure("2") do |config|
     rm -rf /usr/local/go && tar -C /usr/local -xzf go${VERSION}.linux-${ARCH}.tar.gz
     export PATH=$PATH:/usr/local/go/bin
     go version
+
+    # Install crictl
+    VERSION=v1.24.1
+    wget https://github.com/kubernetes-sigs/cri-tools/releases/download/$VERSION/crictl-$VERSION-linux-amd64.tar.gz
+    tar zxvf crictl-$VERSION-linux-amd64.tar.gz -C /usr/local/bin
+    rm -f crictl-$VERSION-linux-amd64.tar.gz
+    crictl version
+
   SHELL
 end
