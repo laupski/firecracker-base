@@ -85,6 +85,18 @@ Vagrant.configure("2") do |config|
     mkdir -p /etc/kata-containers
     cp /snap/kata-containers/current/usr/share/defaults/kata-containers/configuration.toml /etc/kata-containers/
 
-    echo "Successfully installed kata-containers" 
+    echo "Successfully installed kata-containers"
+
+    systemctl daemon-reload
+    systemctl enable crio
+    systemctl start crio
+
+    # Install Go
+    VERSION="1.18.2" # go version
+    ARCH="amd64" # go architecture
+    curl -O -L "https://golang.org/dl/go${VERSION}.linux-${ARCH}.tar.gz"
+    rm -rf /usr/local/go && tar -C /usr/local -xzf go${VERSION}.linux-${ARCH}.tar.gz
+    export PATH=$PATH:/usr/local/go/bin
+    go version
   SHELL
 end
