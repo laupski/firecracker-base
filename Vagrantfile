@@ -64,6 +64,7 @@ Vagrant.configure("2") do |config|
   # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
   # documentation for more information about their specific syntax and use.
   config.vm.provision "shell", inline: <<-SHELL
+    set -e
     # https://github.com/cri-o/cri-o/blob/main/install.md#apt-based-operating-systems
     OS=xUbuntu_20.04
     VERSION=1.24 # kubeadm version
@@ -84,6 +85,7 @@ Vagrant.configure("2") do |config|
     snap install kata-containers --stable --classic
     mkdir -p /etc/kata-containers
     cp /snap/kata-containers/current/usr/share/defaults/kata-containers/configuration.toml /etc/kata-containers/
+    ln -sf /snap/kata-containers/current/usr/bin/containerd-shim-kata-v2 /usr/local/bin/containerd-shim-kata-v2
 
     echo "Successfully installed kata-containers"
 
@@ -106,5 +108,37 @@ Vagrant.configure("2") do |config|
     rm -f crictl-$VERSION-linux-amd64.tar.gz
     crictl version
 
+    # Install kubeadm, kubelet, kubectl
+    ss -tulpn # check to see if 6443 is not being used
+    swapoff -a # there shouldn't be any swap configs in /etc/fstab regardless in this image
+    lscpu # make sure you have at least 2 CPUs
+    free -h # make sure you have at least 2G of RAM
+    
+    apt-get update
+    apt-get install -y apt-transport-https ca-certificates curl
+    curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+    apt-get update
+    apt-get install -y kubelet kubeadm kubectl
+    apt-mark hold kubelet kubeadm kubectl
+
+    # Configure cgroups for k8s
+    echo -e "[crio.runtime]\nconmon_cgroup = \"pod\"\ncgroup_manager = \"cgroupfs\"" > /etc/crio/crio.conf.d/02-cgroup-manager.conf
+
+    # Configure IP forwarding
+    modprobe br_netfilter
+    echo 1 > /proc/sys/net/ipv4/ip_forward
+
+    kubeadm init
+
+    # set up default user for kubectl
+    USER=vagrant
+    mkdir -p /home/$USER/.kube
+    cp -i /etc/kubernetes/admin.conf /home/$USER/.kube/config
+    chown $(id -u $USER):$(id -g $USER) /home/$USER/.kube/config
+    
+    export KUBECONFIG=/etc/kubernetes/admin.conf
+
+    # Network plugin install
   SHELL
 end
