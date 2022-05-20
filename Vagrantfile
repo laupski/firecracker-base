@@ -129,7 +129,16 @@ Vagrant.configure("2") do |config|
     modprobe br_netfilter
     echo 1 > /proc/sys/net/ipv4/ip_forward
 
-    kubeadm init
+    curl https://raw.githubusercontent.com/cri-o/cri-o/main/contrib/cni/10-crio-bridge.conf > 10-crio-bridge.conf
+    cp 10-crio-bridge.conf /etc/cni/net.d
+    CIDR="10.85.0.0/16"
+
+    #snap install yq
+    #KUBEADM_CONFIG="kubeadm.yaml"
+    #kubeadm config print init-defaults --component-configs=KubeletConfiguration > "$KUBEADM_CONFIG"
+    #yq -i eval 'select(.nodeRegistration.criSocket) |= .nodeRegistration.criSocket = "unix:///var/run/crio/crio.sock"' "$KUBEADM_CONFIG"
+
+    kubeadm init --pod-network-cidr=$CIDR
 
     # set up default user for kubectl
     USER=vagrant
@@ -138,7 +147,7 @@ Vagrant.configure("2") do |config|
     chown $(id -u $USER):$(id -g $USER) /home/$USER/.kube/config
     
     export KUBECONFIG=/etc/kubernetes/admin.conf
+    #kubectl taint nodes master key:NoSchedule-
 
-    # Network plugin install
   SHELL
 end
