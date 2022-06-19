@@ -1,0 +1,1 @@
+systemctl daemon-reoad && systemctl restart crio

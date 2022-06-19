@@ -1,0 +1,1 @@
+sudo echo "unqualified-search-registries = [\"docker.io\"]" > /etc/containers/registries.conf
